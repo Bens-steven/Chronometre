@@ -1,0 +1,9 @@
+@echo off
+echo Starting Django Backend...
+echo Activating virtual environment...
+call .venv\Scripts\activate.bat
+cd backend
+echo Starting Django server on 0.0.0.0:8000 (accessible depuis le reseau local)...
+python manage.py runserver 0.0.0.0:8000
+pause
+

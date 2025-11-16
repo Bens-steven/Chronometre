@@ -1,0 +1,484 @@
+/* Gestionnaire des alarmes */
+.alarm-manager-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: fadeIn 0.3s ease-out;
+  padding: 20px;
+}
+
+@keyframes fadeIn {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+.alarm-manager-panel {
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(30px);
+  -webkit-backdrop-filter: blur(30px);
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+  width: 90%;
+  max-width: 600px;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  animation: slideInFromTop 0.3s ease-out;
+}
+
+@keyframes slideInFromTop {
+  0% {
+    opacity: 0;
+    transform: translateY(-30px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.alarm-manager-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.alarm-manager-header h3 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+  color: white;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+.alarm-manager-content {
+  flex: 1;
+  padding: 20px;
+  overflow-y: auto;
+}
+
+.alarm-section {
+  margin-bottom: 30px;
+}
+
+.alarm-section h4 {
+  margin: 0 0 15px 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.9);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.alarm-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.alarm-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  border: 2px solid transparent;
+  transition: all 0.3s ease;
+  min-height: 60px;
+}
+
+.alarm-item:hover {
+  background: rgba(255, 255, 255, 0.15);
+  transform: translateY(-2px);
+}
+
+.alarm-item.selected {
+  border-color: #4caf50;
+  background: rgba(76, 175, 80, 0.2);
+}
+
+.alarm-info {
+  flex: 1;
+}
+
+.alarm-name {
+  font-size: 16px;
+  font-weight: 600;
+  color: white;
+  margin-bottom: 4px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+.alarm-description {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.7);
+  font-style: italic;
+}
+
+.alarm-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.play-button {
+  background: transparent;
+  border: none;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.play-button:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.play-button:active {
+  background: rgba(255, 255, 255, 0.2);
+  transform: scale(0.95);
+}
+
+.play-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.play-button svg {
+  width: 24px;
+  height: 24px;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+}
+
+.select-button, .delete-button {
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  min-height: 40px;
+}
+
+.select-button {
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.select-button:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.select-button:active {
+  transform: scale(0.95);
+}
+
+.select-button.selected {
+  background: rgba(76, 175, 80, 0.8);
+  color: white;
+  border-color: rgba(76, 175, 80, 0.6);
+}
+
+.select-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.delete-button {
+  background: transparent;
+  border: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255, 107, 107, 0.8);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.delete-button:hover {
+  background: rgba(255, 107, 107, 0.1);
+  color: #ff6b6b;
+}
+
+.delete-button:active {
+  background: rgba(255, 107, 107, 0.2);
+  transform: scale(0.95);
+}
+
+.delete-button svg {
+  width: 20px;
+  height: 20px;
+}
+
+/* Section d'upload */
+.upload-section {
+  margin-bottom: 20px;
+  padding: 20px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  border: 2px dashed rgba(255, 255, 255, 0.3);
+}
+
+.upload-button {
+  width: 100%;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 8px;
+  color: white;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  min-height: 48px;
+}
+
+.upload-button:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.5);
+  transform: translateY(-1px);
+}
+
+.upload-button:active {
+  transform: scale(0.98);
+}
+
+.upload-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.upload-error {
+  margin-top: 10px;
+  padding: 10px;
+  background: rgba(255, 107, 107, 0.2);
+  border: 1px solid rgba(255, 107, 107, 0.5);
+  border-radius: 8px;
+  color: #ff6b6b;
+  font-size: 14px;
+  text-align: center;
+}
+
+.upload-info {
+  margin-top: 10px;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.6);
+  text-align: center;
+  font-style: italic;
+}
+
+.no-custom-alarms {
+  padding: 30px;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.6);
+  font-style: italic;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  border: 2px dashed rgba(255, 255, 255, 0.2);
+}
+
+/* Footer */
+.alarm-manager-footer {
+  padding: 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  justify-content: center;
+}
+
+.close-footer-button {
+  padding: 12px 24px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 8px;
+  color: white;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  min-height: 44px;
+}
+
+.close-footer-button:hover {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+.close-footer-button:active {
+  transform: scale(0.95);
+}
+
+/* Responsive Mobile */
+@media (max-width: 768px) {
+  .alarm-manager-overlay {
+    padding: 10px;
+  }
+
+  .alarm-manager-panel {
+    width: 95%;
+    max-height: 90vh;
+    max-height: 90dvh;
+    border-radius: 16px;
+  }
+  
+  .alarm-manager-header {
+    padding: 15px;
+  }
+
+  .alarm-manager-header h3 {
+    font-size: 18px;
+  }
+  
+  .alarm-manager-content {
+    padding: 15px;
+  }
+
+  .alarm-section h4 {
+    font-size: 14px;
+  }
+
+  .alarm-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 15px;
+  }
+  
+  .alarm-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .play-button, .select-button, .delete-button {
+    flex: 1;
+    min-height: 44px;
+    font-size: 13px;
+  }
+
+  .upload-section {
+    padding: 15px;
+  }
+
+  .alarm-manager-footer {
+    padding: 15px;
+  }
+}
+
+/* Smartphones */
+@media (max-width: 480px) {
+  .alarm-manager-panel {
+    width: 98%;
+    max-height: 92vh;
+    max-height: 92dvh;
+  }
+
+  .alarm-manager-header {
+    padding: 12px;
+  }
+
+  .alarm-manager-header h3 {
+    font-size: 16px;
+  }
+
+  .alarm-manager-content {
+    padding: 12px;
+  }
+
+  .alarm-section {
+    margin-bottom: 20px;
+  }
+
+  .alarm-item {
+    padding: 12px;
+  }
+
+  .alarm-name {
+    font-size: 15px;
+  }
+
+  .alarm-description {
+    font-size: 13px;
+  }
+
+  .play-button, .select-button, .delete-button {
+    padding: 10px;
+    font-size: 12px;
+  }
+}
+
+/* Mode paysage mobile */
+@media (max-height: 600px) and (orientation: landscape) {
+  .alarm-manager-panel {
+    max-height: 95vh;
+    max-height: 95dvh;
+  }
+
+  .alarm-manager-header {
+    padding: 10px 15px;
+  }
+
+  .alarm-manager-content {
+    padding: 10px 15px;
+  }
+
+  .alarm-section {
+    margin-bottom: 15px;
+  }
+
+  .alarm-item {
+    padding: 10px;
+    min-height: 50px;
+  }
+
+  .alarm-manager-footer {
+    padding: 10px 15px;
+  }
+}
+
+/* Touch targets optimisés */
+@media (hover: none) and (pointer: coarse) {
+  .alarm-item {
+    padding: 18px 15px;
+  }
+
+  .play-button, .select-button, .delete-button {
+    min-height: 48px;
+    padding: 10px 14px;
+  }
+
+  .upload-button {
+    min-height: 52px;
+  }
+
+  .close-footer-button {
+    min-height: 48px;
+    padding: 14px 28px;
+  }
+}
