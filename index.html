@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chronomètre - Groupe 6 L2RSI</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+            max-width: 500px;
+            width: 100%;
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 2em;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 0.9em;
+        }
+
+        .display {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .time {
+            font-size: 3.5em;
+            font-weight: bold;
+            color: #667eea;
+            font-family: 'Courier New', monospace;
+            letter-spacing: 2px;
+        }
+
+        .controls {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+
+        button {
+            padding: 15px 30px;
+            font-size: 1em;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .start-btn {
+            background: #28a745;
+            color: white;
+        }
+
+        .start-btn:hover {
+            background: #218838;
+        }
+
+        .pause-btn {
+            background: #ffc107;
+            color: #333;
+        }
+
+        .pause-btn:hover {
+            background: #e0a800;
+        }
+
+        .reset-btn {
+            background: #dc3545;
+            color: white;
+        }
+
+        .reset-btn:hover {
+            background: #c82333;
+        }
+
+        .lap-btn {
+            background: #17a2b8;
+            color: white;
+        }
+
+        .lap-btn:hover {
+            background: #138496;
+        }
+
+        .laps {
+            max-height: 200px;
+            overflow-y: auto;
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 15px;
+        }
+
+        .laps h3 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 1.2em;
+        }
+
+        .lap-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px;
+            background: white;
+            border-radius: 5px;
+            margin-bottom: 8px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        .lap-number {
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .lap-time {
+            font-family: 'Courier New', monospace;
+            color: #333;
+        }
+
+        .laps::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .laps::-webkit-scrollbar-track {
+            background: #e9ecef;
+            border-radius: 10px;
+        }
+
+        .laps::-webkit-scrollbar-thumb {
+            background: #667eea;
+            border-radius: 10px;
+        }
+
+        .laps::-webkit-scrollbar-thumb:hover {
+            background: #5568d3;
+        }
+
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>⏱️ Chronomètre</h1>
+        <p class="subtitle">Groupe 6 L2RSI</p>
+        
+        <div class="display">
+            <div class="time" id="display">00:00:00.00</div>
+        </div>
+
+        <div class="controls">
+            <button class="start-btn" id="startBtn" onclick="start()">Démarrer</button>
+            <button class="pause-btn hidden" id="pauseBtn" onclick="pause()">Pause</button>
+            <button class="reset-btn" id="resetBtn" onclick="reset()">Réinitialiser</button>
+            <button class="lap-btn" id="lapBtn" onclick="recordLap()">Tour</button>
+        </div>
+
+        <div class="laps" id="lapsContainer">
+            <h3>Tours enregistrés</h3>
+            <div id="lapsList"></div>
+        </div>
+    </div>
+
+    <script>
+        let startTime = 0;
+        let elapsedTime = 0;
+        let timerInterval = null;
+        let isRunning = false;
+        let lapCount = 0;
+
+        function formatTime(time) {
+            const date = new Date(time);
+            const hours = String(date.getUTCHours()).padStart(2, '0');
+            const minutes = String(date.getUTCMinutes()).padStart(2, '0');
+            const seconds = String(date.getUTCSeconds()).padStart(2, '0');
+            const milliseconds = String(Math.floor(date.getUTCMilliseconds() / 10)).padStart(2, '0');
+            return `${hours}:${minutes}:${seconds}.${milliseconds}`;
+        }
+
+        function updateDisplay() {
+            const currentTime = Date.now();
+            elapsedTime = currentTime - startTime;
+            document.getElementById('display').textContent = formatTime(elapsedTime);
+        }
+
+        function start() {
+            if (!isRunning) {
+                startTime = Date.now() - elapsedTime;
+                timerInterval = setInterval(updateDisplay, 10);
+                isRunning = true;
+                
+                document.getElementById('startBtn').classList.add('hidden');
+                document.getElementById('pauseBtn').classList.remove('hidden');
+            }
+        }
+
+        function pause() {
+            if (isRunning) {
+                clearInterval(timerInterval);
+                isRunning = false;
+                
+                document.getElementById('startBtn').classList.remove('hidden');
+                document.getElementById('pauseBtn').classList.add('hidden');
+                document.getElementById('startBtn').textContent = 'Reprendre';
+            }
+        }
+
+        function reset() {
+            clearInterval(timerInterval);
+            isRunning = false;
+            startTime = 0;
+            elapsedTime = 0;
+            lapCount = 0;
+            
+            document.getElementById('display').textContent = '00:00:00.00';
+            document.getElementById('startBtn').classList.remove('hidden');
+            document.getElementById('pauseBtn').classList.add('hidden');
+            document.getElementById('startBtn').textContent = 'Démarrer';
+            document.getElementById('lapsList').innerHTML = '';
+        }
+
+        function recordLap() {
+            if (isRunning) {
+                lapCount++;
+                const lapTime = formatTime(elapsedTime);
+                const lapItem = document.createElement('div');
+                lapItem.className = 'lap-item';
+                lapItem.innerHTML = `
+                    <span class="lap-number">Tour ${lapCount}</span>
+                    <span class="lap-time">${lapTime}</span>
+                `;
+                document.getElementById('lapsList').insertBefore(lapItem, document.getElementById('lapsList').firstChild);
+            }
+        }
+    </script>
+</body>
+</html>
