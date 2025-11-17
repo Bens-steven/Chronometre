@@ -58,12 +58,7 @@ function AlarmManager({ isOpen, onClose, selectedAlarm, onAlarmChange }) {
         setIsPlaying(null);
       }
       
-      // Forcer l'activation audio avant de jouer
-      const audioEnabled = await AudioUtils.enableAudio();
-      if (!audioEnabled) {
-        console.log('❌ Impossible d\'activer l\'audio');
-        return;
-      }
+      // Ne plus forcer l'activation ici car playCustomSound et playAlarmSequence le font déjà
       
       setIsPlaying(alarmId);
       

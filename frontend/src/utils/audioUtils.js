@@ -52,8 +52,6 @@ class AudioUtilsClass {
           // Si réussi, jouer un son test très court
           if (this.isAudioEnabled) {
             console.log('✅ Audio activé avec succès sur mobile');
-            // Son test ultra-court pour confirmer l'activation
-            await this.generateBeepSound(440, 0.01, 0.001);
           }
         } catch (error) {
           console.log('⚠️ Échec activation audio:', error);
@@ -99,25 +97,8 @@ class AudioUtilsClass {
         this.isAudioEnabled = true;
         console.log('✅ Audio activé avec succès, état:', this.audioContext.state);
         
-        // Sur mobile, créer et jouer immédiatement un son test silencieux
-        if (this.isMobile) {
-          console.log('📱 Test audio mobile...');
-          const testOscillator = this.audioContext.createOscillator();
-          const testGain = this.audioContext.createGain();
-          
-          testOscillator.connect(testGain);
-          testGain.connect(this.audioContext.destination);
-          
-          // Son ultra-court et silencieux
-          testOscillator.frequency.setValueAtTime(440, this.audioContext.currentTime);
-          testGain.gain.setValueAtTime(0.001, this.audioContext.currentTime);
-          testGain.gain.exponentialRampToValueAtTime(0.0001, this.audioContext.currentTime + 0.01);
-          
-          testOscillator.start(this.audioContext.currentTime);
-          testOscillator.stop(this.audioContext.currentTime + 0.01);
-          
-          console.log('🔊 Test audio mobile effectué');
-        }
+        // Ne plus jouer de son de test ici pour éviter la superposition
+        // Le contexte audio est maintenant activé, les sons suivants fonctionneront
         
         return true;
       } else {
@@ -408,6 +389,11 @@ class AudioUtilsClass {
           
           if (loop && this.isPlaying) {
             setTimeout(playSound, 500); // Pause de 500ms entre les répétitions
+          } else {
+            // Si ce n'est pas en boucle et que c'est le dernier son, arrêter
+            if (this.currentAudioElements.length === 0) {
+              this.isPlaying = false;
+            }
           }
         };
 
@@ -420,9 +406,8 @@ class AudioUtilsClass {
       console.error('❌ Erreur lecture son personnalisé:', error);
       this.isPlaying = false;
       
-      // Fallback sur alarme classique
-      console.log('🔄 Fallback sur alarme classique');
-      this.playAlarmSequence('classic');
+      // NE PLUS jouer de fallback automatique - laisser l'utilisateur gérer l'erreur
+      throw error; // Propager l'erreur pour que AlarmManager puisse la gérer
     }
   }
 

@@ -39,8 +39,8 @@ class TimerViewSet(viewsets.ModelViewSet):
         )
         return timer
     
-    @action(methods=['post'], detail=True, url_path='action')
-    def perform_action(self, request, pk=None):
+    @action(methods=['post'], detail=True, url_path='action', url_name='timer-action')
+    def timer_action(self, request, pk=None):
         """Endpoint pour les actions (start, stop, reset, toggle_mode)"""
         timer = self.get_object()
         serializer = TimerActionSerializer(data=request.data)
@@ -127,9 +127,17 @@ class TimerViewSet(viewsets.ModelViewSet):
     def set_time(self, request, pk=None):
         """Endpoint pour définir le temps initial du minuteur"""
         timer = self.get_object()
-        hours = request.data.get('hours', 0)
-        minutes = request.data.get('minutes', 0)
-        seconds = request.data.get('seconds', 0)
+        
+        # Convertir explicitement en entiers
+        try:
+            hours = int(request.data.get('hours', 0))
+            minutes = int(request.data.get('minutes', 0))
+            seconds = int(request.data.get('seconds', 0))
+        except (ValueError, TypeError):
+            return Response(
+                {'error': 'Les valeurs hours, minutes et seconds doivent être des nombres'}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
         
         # Convertir en millisecondes
         total_ms = (hours * 3600 + minutes * 60 + seconds) * 1000

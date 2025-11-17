@@ -1,9 +1,12 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import axios from 'axios';
 import AlarmManager from './AlarmManager';
+import TempoAssistant from './TempoAssistant';
 import { AudioUtils } from '../utils/audioUtils';
 import { TIMER_API_URL, PRESETS_API_URL } from '../config';
 import './Stopwatch.css';
+// Importer le gestionnaire de détection de gestes
+import '../utils/gestureDetection';
 
 function Stopwatch({ onModeChange }) {
   const [mode, setMode] = useState('stopwatch'); // 'stopwatch' or 'countdown'
@@ -36,6 +39,7 @@ function Stopwatch({ onModeChange }) {
   const [customAlarms, setCustomAlarms] = useState([]);
   const [focusMode, setFocusMode] = useState(false);
   const [isAlarmPlaying, setIsAlarmPlaying] = useState(false);
+  const [showTempoAssistant, setShowTempoAssistant] = useState(false);
   
   // Détection du double-clic/double-tap sur l'affichage du temps
   const [lastTap, setLastTap] = useState(0);
@@ -70,26 +74,26 @@ function Stopwatch({ onModeChange }) {
     
     // Optionnel: afficher une notification temporaire
     if (newFocusMode) {
-      console.log('🎯 Mode Focus actif - Contrôles limités pendant le minuteur');
+      console.log('Mode Focus actif - Contrôles limités pendant le minuteur');
     } else {
-      console.log('🎯 Mode Focus désactivé - Tous les contrôles disponibles');
+      console.log('Mode Focus désactivé - Tous les contrôles disponibles');
     }
   }, [focusMode]);
 
   // Fonction universelle pour activer l'audio sur CHAQUE interaction - DÉPLACÉE AVANT utilisation
   const forceAudioActivation = useCallback(async () => {
     try {
-      console.log('🔓 Activation audio forcée sur interaction');
+      console.log('Activation audio forcée sur interaction');
       await AudioUtils.enableAudio();
       
       // Sur mobile, jouer aussi un micro son à chaque interaction pour maintenir l'activation
       if (AudioUtils.detectMobile()) {
-        console.log('📱 Mobile détecté - Son micro pour maintenir l\'activation');
+        console.log('Mobile détecté - Son micro pour maintenir l\'activation');
         // Son très court et silencieux pour maintenir le contexte audio actif
         await AudioUtils.generateBeepSound(440, 0.05, 0.01);
       }
     } catch (error) {
-      console.log('⚠️ Erreur activation audio:', error);
+      console.log('Erreur activation audio:', error);
     }
   }, []);
 
@@ -106,43 +110,43 @@ function Stopwatch({ onModeChange }) {
 
   // Fonction pour jouer l'alarme - DÉPLACÉE AVANT startLocalTimer
   const playAlarmSound = useCallback(async () => {
-    console.log('🔊 playAlarmSound appelée');
-    console.log('🎯 selectedAlarm:', selectedAlarm);
-    console.log('📚 customAlarms:', customAlarms);
+    console.log('playAlarmSound appelée');
+    console.log('selectedAlarm:', selectedAlarm);
+    console.log('customAlarms:', customAlarms);
     
     // FORCER l'état d'alarme AVANT de jouer le son
     setIsAlarmPlaying(true);
-    console.log('🚨 État isAlarmPlaying forcé à true');
+    console.log('État isAlarmPlaying forcé à true');
     
     // Arrêter tout audio en cours avant de jouer une nouvelle alarme
     AudioUtils.stopCurrentAudio();
     
     try {
       if (selectedAlarm.isCustom) {
-        console.log('🎵 Tentative de lecture d\'une alarme personnalisée');
+        console.log('Tentative de lecture d\'une alarme personnalisée');
         const customAlarm = customAlarms.find(a => a.id === selectedAlarm.id);
-        console.log('🔍 Alarme trouvée:', customAlarm);
+        console.log('Alarme trouvée:', customAlarm);
         
         if (customAlarm && customAlarm.audioData) {
-          console.log('✅ AudioData disponible, lecture du son personnalisé');
+          console.log('AudioData disponible, lecture du son personnalisé');
           // Pour les audios personnalisés, on joue en boucle jusqu'à arrêt manuel
           AudioUtils.playCustomSound(customAlarm.audioData, true); // true = loop
           // Ne pas attendre la fin car on veut une boucle infinie
         } else {
-          console.log('❌ Pas d\'audioData, fallback vers alarme classique');
+          console.log('Pas d\'audioData, fallback vers alarme classique');
           AudioUtils.playAlarmSequence(selectedAlarm.id);
         }
       } else {
-        console.log('🎵 Lecture d\'une alarme par défaut:', selectedAlarm.id);
+        console.log('Lecture d\'une alarme par défaut:', selectedAlarm.id);
         AudioUtils.playAlarmSequence(selectedAlarm.id);
       }
       // Ne pas mettre setIsAlarmPlaying(false) ici car le son continue
     } catch (error) {
-      console.error('❌ Erreur lors de la lecture de l\'alarme:', error);
+      console.error('Erreur lors de la lecture de l\'alarme:', error);
       try {
         AudioUtils.playAlarmSequence('classic');
       } catch (fallbackError) {
-        console.error('❌ Impossible de jouer l\'alarme de secours:', fallbackError);
+        console.error('Impossible de jouer l\'alarme de secours:', fallbackError);
         setIsAlarmPlaying(false); // Arrêter seulement en cas d'échec complet
       }
     }
@@ -1706,7 +1710,6 @@ function Stopwatch({ onModeChange }) {
           </button>
           
           {/* Bouton pour activer/désactiver la détection de gestes */}
-          {/* Temporarily disabled due to MediaPipe initialization issues
           <button 
             className="presets-button"
             id="gesture-toggle-btn"
@@ -1724,7 +1727,15 @@ function Stopwatch({ onModeChange }) {
           >
             👋 Gestes
           </button>
-          */}
+          
+          {/* Bouton pour ouvrir l'Assistant IA */}
+          <button 
+            className="presets-button"
+            onClick={() => handleInteractionWithAudio(() => setShowTempoAssistant(true))}
+            style={{ background: 'rgba(33, 150, 243, 0.3)' }}
+          >
+            🤖 IA
+          </button>
         </div>
         
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -1756,6 +1767,22 @@ function Stopwatch({ onModeChange }) {
         onClose={() => setShowAlarmManager(false)}
         selectedAlarm={selectedAlarm}
         onAlarmChange={handleAlarmChange}
+      />
+
+      {/* Assistant IA */}
+      <TempoAssistant
+        isOpen={showTempoAssistant}
+        onClose={() => setShowTempoAssistant(false)}
+        onCreateTimer={(timerData) => {
+          handleInteractionWithAudio(async () => {
+            const { hours, minutes, seconds } = timerData;
+            const response = await axios.post(`${TIMER_API_URL}/set_time/`, { hours, minutes, seconds });
+            const data = response.data;
+            setInitialTime(data.initial_time);
+            setCurrentTime(data.current_time);
+            setShowTempoAssistant(false);
+          });
+        }}
       />
 
       {/* Panneau des presets */}
