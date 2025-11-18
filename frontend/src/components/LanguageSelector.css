@@ -57,7 +57,8 @@
   overflow: hidden;
 }
 
-.language-selector:hover .language-dropdown {
+.language-selector:hover .language-dropdown,
+.language-dropdown.open {
   opacity: 1;
   visibility: visible;
   transform: translateY(0);
@@ -135,29 +136,30 @@
 /* Responsive pour mobile */
 @media (max-width: 768px) {
   .language-button {
-    padding: 6px 10px;
-    font-size: 12px;
+    padding: 10px 14px;
+    font-size: 15px;
+    min-height: 48px;
   }
 
   .language-button .flag {
-    font-size: 18px;
+    font-size: 22px;
   }
 
   .language-button .lang-code {
-    font-size: 11px;
-  }
-
-  .language-dropdown {
-    min-width: 160px;
-  }
-
-  .language-option {
-    padding: 10px 14px;
     font-size: 13px;
   }
 
+  .language-dropdown {
+    min-width: 180px;
+  }
+
+  .language-option {
+    padding: 12px 16px;
+    font-size: 14px;
+  }
+
   .language-option .flag {
-    font-size: 20px;
+    font-size: 22px;
   }
 }
 

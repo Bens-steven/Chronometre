@@ -55,6 +55,8 @@ export default function Stopwatch({ onModeChange }) {
   const [customAlarms, setCustomAlarms] = useState([]);
   const [isAlarmPlaying, setIsAlarmPlaying] = useState(false);
   const [showTempoAssistant, setShowTempoAssistant] = useState(false);
+  const [showHeaderOverflow, setShowHeaderOverflow] = useState(false);
+  const [isNarrowHeader, setIsNarrowHeader] = useState(false);
   const [showColorPanel, setShowColorPanel] = useState(false);
   
   // Détection du double-clic/double-tap sur l'affichage du temps
@@ -70,6 +72,7 @@ export default function Stopwatch({ onModeChange }) {
   const lastUpdateRef = useRef(Date.now());
   const timeDisplayRef = useRef(null);
   const alarmTriggeredRef = useRef(false); // Protection contre double alarme
+  const focusTimeoutRef = useRef(null); // Timeout pour reset le compteur focus
 
   // Variables manquantes pour corriger les erreurs ESLint
   const [elapsedTime, setElapsedTime] = useState(0);
@@ -82,6 +85,11 @@ export default function Stopwatch({ onModeChange }) {
     const newFocusMode = !focusMode;
     setFocusMode(newFocusMode);
     setFocusStartCount(0);
+    // Clear any existing timeout
+    if (focusTimeoutRef.current) {
+      clearTimeout(focusTimeoutRef.current);
+      focusTimeoutRef.current = null;
+    }
     playClickSound();
     if (newFocusMode) {
       // Activer le plein écran
@@ -305,6 +313,21 @@ export default function Stopwatch({ onModeChange }) {
 
   // Synchroniser les alarmes personnalisées quand l'AlarmManager se ferme
   useEffect(() => {
+    // Detect narrow screens to move header controls on mobile
+    const checkWidth = () => {
+      try {
+        setIsNarrowHeader(window.innerWidth <= 480);
+      } catch (e) {
+        setIsNarrowHeader(false);
+      }
+    };
+    checkWidth();
+    window.addEventListener('resize', checkWidth);
+    return () => window.removeEventListener('resize', checkWidth);
+  }, []);
+
+  useEffect(() => {
+    
     if (!showAlarmManager) {
       // Recharger les alarmes personnalisées depuis localStorage quand on ferme le gestionnaire
       console.log('🔄 Synchronisation des alarmes personnalisées');
@@ -599,12 +622,26 @@ export default function Stopwatch({ onModeChange }) {
     // En mode focus, compter les appuis sur Start
     if (focusMode) {
       setFocusStartCount(prev => {
-        if (prev + 1 >= 3) {
+        // Clear existing timeout
+        if (focusTimeoutRef.current) {
+          clearTimeout(focusTimeoutRef.current);
+        }
+        const newCount = prev + 1;
+        if (newCount >= 3) {
           // Unlock buttons and exit Focus mode after 3 presses
           setFocusMode(false);
+          // Quitter le plein écran
+          if (document.exitFullscreen && document.fullscreenElement) {
+            document.exitFullscreen();
+          }
           return 0;
+        } else {
+          // Set timeout to reset counter after 2 seconds
+          focusTimeoutRef.current = setTimeout(() => {
+            setFocusStartCount(0);
+          }, 2000);
+          return newCount;
         }
-        return prev + 1;
       });
     }
     await handleInteractionWithAudio(async () => {
@@ -1795,23 +1832,21 @@ export default function Stopwatch({ onModeChange }) {
             </button>
           </div>
           
-          {/* Afficher Presets seulement en mode countdown */}
-          {mode === 'countdown' && (
-            <button 
-              className={`presets-button${isFocusLocked ? ' disabled' : ''}`}
-              onClick={() => !isFocusLocked && handleInteractionWithAudio(() => setShowPresets(true))}
-              disabled={isFocusLocked}
-            >
-              {t('presets')}
-            </button>
-          )}
-          
-          {/* Afficher Gestes seulement en mode countdown */}
-          {mode === 'countdown' && (
-            <button 
-              className={`presets-button${isFocusLocked ? ' disabled' : ''}`}
-              id="gesture-toggle-btn"
-              onClick={() => !isFocusLocked && handleInteractionWithAudio(() => {
+          {/* Presets / Gestes / Tempo are provided via the overflow menu on mobile; direct buttons removed in countdown mode */}
+        </div>
+
+        {/* More button for small screens: opens overflow menu with hidden header buttons (countdown only) */}
+        {mode === 'countdown' && isNarrowHeader && (
+          <div className="header-more-container">
+          <button className="more-header-button" onClick={() => setShowHeaderOverflow(prev => !prev)} aria-label="Plus">
+            ⋯
+          </button>
+          {showHeaderOverflow && (
+            <div className="header-overflow-menu">
+              <button className="overflow-item" onClick={() => { setShowPresets(true); setShowHeaderOverflow(false); }}>
+                {t('presets')}
+              </button>
+              <button className="overflow-item" id="gesture-toggle-btn-mobile" onClick={() => {
                 const gestureInterface = document.getElementById('gesture-interface');
                 if (gestureInterface.style.display === 'none' || !gestureInterface.style.display) {
                   gestureInterface.style.display = 'block';
@@ -1820,27 +1855,42 @@ export default function Stopwatch({ onModeChange }) {
                   gestureInterface.style.display = 'none';
                   window.stopGestureDetection && window.stopGestureDetection();
                 }
-              })}
-              style={{ background: 'rgba(76, 175, 80, 0.3)' }}
-              disabled={isFocusLocked}
-            >
+                setShowHeaderOverflow(false);
+              }}>
+                {t('gestures')}
+              </button>
+              <button className="overflow-item" onClick={() => { setShowTempoAssistant(true); setShowHeaderOverflow(false); }}>
+                {t('tempo')}
+              </button>
+            </div>
+          )}
+          </div>
+        )}
+
+        {/* On desktop (not narrow) show direct Presets/Gestures/Tempo buttons in countdown mode */}
+        {mode === 'countdown' && !isNarrowHeader && (
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            <button className="presets-button" onClick={() => setShowPresets(true)}>
+              {t('presets')}
+            </button>
+            <button className="presets-button" id="gesture-toggle-btn" onClick={() => {
+              const gestureInterface = document.getElementById('gesture-interface');
+              if (gestureInterface.style.display === 'none' || !gestureInterface.style.display) {
+                gestureInterface.style.display = 'block';
+                window.startGestureDetection && window.startGestureDetection();
+              } else {
+                gestureInterface.style.display = 'none';
+                window.stopGestureDetection && window.stopGestureDetection();
+              }
+            }}>
               {t('gestures')}
             </button>
-          )}
-          
-          {/* Afficher Tempo seulement en mode countdown */}
-          {mode === 'countdown' && (
-            <button 
-              className={`presets-button${isFocusLocked ? ' disabled' : ''}`}
-              onClick={() => !isFocusLocked && handleInteractionWithAudio(() => setShowTempoAssistant(true))}
-              style={{ background: 'rgba(33, 150, 243, 0.3)' }}
-              disabled={isFocusLocked}
-            >
+            <button className="presets-button" onClick={() => setShowTempoAssistant(true)}>
               {t('tempo')}
             </button>
-          )}
-        </div>
-        
+          </div>
+        )}
+
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <LanguageSelector />
           
@@ -2150,7 +2200,7 @@ export default function Stopwatch({ onModeChange }) {
               </div>
             </div>
 
-            <button className="main-control-button" onClick={handleStartStop} disabled={isFocusLocked}>
+            <button className="main-control-button" onClick={handleStartStop}>
               {getMainControlText()}
             </button>
 
@@ -2175,7 +2225,7 @@ export default function Stopwatch({ onModeChange }) {
         ) : (
           <div className="analog-mode">
             <AnalogClock time={currentTime} />
-            <button className="main-control-button" onClick={handleStartStop} disabled={isFocusLocked}>
+            <button className="main-control-button" onClick={handleStartStop}>
               {getMainControlText()}
             </button>
             <div className="secondary-controls">

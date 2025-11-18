@@ -55,6 +55,13 @@ function AlarmManager({ isOpen, onClose, selectedAlarm, onAlarmChange }) {
 
   const handlePlayAlarm = async (alarmId, isCustom = false) => {
     try {
+      // Ensure audio context is enabled on mobile before attempting playback
+      try {
+        const enabled = await AudioUtils.enableAudio();
+        console.log('handlePlayAlarm: Audio enable attempt result:', enabled);
+      } catch (err) {
+        console.warn('handlePlayAlarm: enableAudio threw:', err);
+      }
       console.log('🎵 Tentative de lecture alarme:', alarmId, 'isCustom:', isCustom);
       
       // Si on reclique sur le même son qui joue actuellement, l'arrêter
