@@ -1,0 +1,170 @@
+.language-selector {
+  position: relative;
+  display: inline-block;
+}
+
+.language-button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  color: white;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.language-button:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.3);
+  transform: translateY(-1px);
+}
+
+.language-button:active {
+  transform: translateY(0);
+}
+
+.language-button .flag {
+  font-size: 20px;
+  line-height: 1;
+}
+
+.language-button .lang-code {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+.language-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  min-width: 180px;
+  background: rgba(30, 30, 30, 0.98);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-10px);
+  transition: all 0.3s ease;
+  z-index: 1000;
+  backdrop-filter: blur(10px);
+  overflow: hidden;
+}
+
+.language-selector:hover .language-dropdown {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+.language-option {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 12px 16px;
+  background: transparent;
+  border: none;
+  color: white;
+  cursor: pointer;
+  font-size: 14px;
+  text-align: left;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.language-option:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.language-option.active {
+  background: rgba(76, 175, 80, 0.2);
+  color: #4caf50;
+}
+
+.language-option.active:hover {
+  background: rgba(76, 175, 80, 0.3);
+}
+
+.language-option .flag {
+  font-size: 24px;
+  line-height: 1;
+}
+
+.language-option .lang-name {
+  flex: 1;
+  font-weight: 500;
+}
+
+.language-option .checkmark {
+  color: #4caf50;
+  font-size: 16px;
+  font-weight: bold;
+}
+
+/* Animation d'entrée pour chaque option */
+.language-dropdown .language-option {
+  animation: fadeInSlide 0.3s ease forwards;
+  opacity: 0;
+}
+
+.language-dropdown .language-option:nth-child(1) { animation-delay: 0.05s; }
+.language-dropdown .language-option:nth-child(2) { animation-delay: 0.1s; }
+.language-dropdown .language-option:nth-child(3) { animation-delay: 0.15s; }
+.language-dropdown .language-option:nth-child(4) { animation-delay: 0.2s; }
+.language-dropdown .language-option:nth-child(5) { animation-delay: 0.25s; }
+.language-dropdown .language-option:nth-child(6) { animation-delay: 0.3s; }
+
+@keyframes fadeInSlide {
+  from {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Responsive pour mobile */
+@media (max-width: 768px) {
+  .language-button {
+    padding: 6px 10px;
+    font-size: 12px;
+  }
+
+  .language-button .flag {
+    font-size: 18px;
+  }
+
+  .language-button .lang-code {
+    font-size: 11px;
+  }
+
+  .language-dropdown {
+    min-width: 160px;
+  }
+
+  .language-option {
+    padding: 10px 14px;
+    font-size: 13px;
+  }
+
+  .language-option .flag {
+    font-size: 20px;
+  }
+}
+
+/* Thème sombre amélioré */
+@media (prefers-color-scheme: dark) {
+  .language-dropdown {
+    background: rgba(20, 20, 20, 0.98);
+    border-color: rgba(255, 255, 255, 0.15);
+  }
+}

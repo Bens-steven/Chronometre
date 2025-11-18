@@ -1,14 +1,28 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { AudioUtils } from '../utils/audioUtils';
+import { useLanguage } from '../contexts/LanguageContext';
 import './AlarmManager.css';
 
 function AlarmManager({ isOpen, onClose, selectedAlarm, onAlarmChange }) {
+  const { t } = useLanguage();
   const [defaultAlarms, setDefaultAlarms] = useState([]);
   const [customAlarms, setCustomAlarms] = useState([]);
   const [isPlaying, setIsPlaying] = useState(null);
   const [uploadError, setUploadError] = useState('');
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef(null);
+
+  // Fonction pour traduire le nom d'une alarme
+  const getAlarmName = (alarmId) => {
+    const alarmNameKey = `alarm${alarmId.charAt(0).toUpperCase() + alarmId.slice(1)}`;
+    return t(alarmNameKey);
+  };
+
+  // Fonction pour traduire la description d'une alarme
+  const getAlarmDescription = (alarmId) => {
+    const alarmDescKey = `alarm${alarmId.charAt(0).toUpperCase() + alarmId.slice(1)}Desc`;
+    return t(alarmDescKey);
+  };
 
   useEffect(() => {
     console.log('🔄 AlarmManager useEffect - Chargement des alarmes');
@@ -125,7 +139,7 @@ function AlarmManager({ isOpen, onClose, selectedAlarm, onAlarmChange }) {
       const newAlarm = {
         id: `custom_${Date.now()}`,
         name: file.name.replace(/\.[^/.]+$/, ""), // Enlever l'extension
-        description: `Fichier personnalisé (${(file.size / 1024 / 1024).toFixed(1)}MB)`,
+        description: `${t('customFile')} (${(file.size / 1024 / 1024).toFixed(1)}MB)`,
         audioData: audioDataUrl, // Data URL persistante
         fileName: file.name,
         fileSize: file.size,
@@ -153,7 +167,7 @@ function AlarmManager({ isOpen, onClose, selectedAlarm, onAlarmChange }) {
   };
 
   const handleDeleteCustomAlarm = (alarmId) => {
-    if (!window.confirm('Êtes-vous sûr de vouloir supprimer cette alarme ?')) return;
+    if (!window.confirm(t('confirmDeleteAlarm'))) return;
     
     // Plus besoin de révoquer l'URL car on utilise des data URLs maintenant
     const updatedAlarms = customAlarms.filter(a => a.id !== alarmId);
@@ -173,20 +187,20 @@ function AlarmManager({ isOpen, onClose, selectedAlarm, onAlarmChange }) {
     <div className="alarm-manager-overlay">
       <div className="alarm-manager-panel">
         <div className="alarm-manager-header">
-          <h3>Gestion des Sons d'Alarme</h3>
+          <h3>{t('alarmManager')}</h3>
           <button className="close-button" onClick={onClose}>×</button>
         </div>
 
         <div className="alarm-manager-content">
           {/* Alarmes par défaut */}
           <div className="alarm-section">
-            <h4>Sons par défaut</h4>
+            <h4>{t('defaultAlarms')}</h4>
             <div className="alarm-list">
               {defaultAlarms.map(alarm => (
                 <div key={alarm.id} className={`alarm-item ${selectedAlarm?.id === alarm.id && !selectedAlarm?.isCustom ? 'selected' : ''}`}>
                   <div className="alarm-info">
-                    <div className="alarm-name">{alarm.name}</div>
-                    <div className="alarm-description">{alarm.description}</div>
+                    <div className="alarm-name">{getAlarmName(alarm.id)}</div>
+                    <div className="alarm-description">{getAlarmDescription(alarm.id)}</div>
                   </div>
                   <div className="alarm-actions">
                     <button 
@@ -209,7 +223,7 @@ function AlarmManager({ isOpen, onClose, selectedAlarm, onAlarmChange }) {
                       className={`select-button ${selectedAlarm?.id === alarm.id && !selectedAlarm?.isCustom ? 'selected' : ''}`}
                       onClick={() => handleSelectAlarm(alarm.id, false)}
                     >
-                      {selectedAlarm?.id === alarm.id && !selectedAlarm?.isCustom ? '✓ Sélectionné' : 'Sélectionner'}
+                      {selectedAlarm?.id === alarm.id && !selectedAlarm?.isCustom ? `✓ ${t('selected')}` : t('select')}
                     </button>
                   </div>
                 </div>
@@ -219,7 +233,7 @@ function AlarmManager({ isOpen, onClose, selectedAlarm, onAlarmChange }) {
 
           {/* Alarmes personnalisées */}
           <div className="alarm-section">
-            <h4>Sons personnalisés</h4>
+            <h4>{t('customAlarms')}</h4>
             
             {/* Upload */}
             <div className="upload-section">
@@ -235,11 +249,11 @@ function AlarmManager({ isOpen, onClose, selectedAlarm, onAlarmChange }) {
                 onClick={() => fileInputRef.current?.click()}
                 disabled={isUploading}
               >
-                {isUploading ? 'Upload en cours...' : 'Ajouter un fichier audio'}
+                {isUploading ? t('uploading') : t('uploadCustomAlarm')}
               </button>
               {uploadError && <div className="upload-error">{uploadError}</div>}
               <div className="upload-info">
-                Formats supportés: MP3, WAV, OGG, M4A, WebM (max 5MB)
+                {t('supportedFormats')}
               </div>
             </div>
 
@@ -274,7 +288,7 @@ function AlarmManager({ isOpen, onClose, selectedAlarm, onAlarmChange }) {
                       onClick={() => handleSelectAlarm(alarm.id, true)}
                       disabled={!alarm.audioData}
                     >
-                      {selectedAlarm?.id === alarm.id && selectedAlarm?.isCustom ? 'Sélectionné' : 'Sélectionner'}
+                      {selectedAlarm?.id === alarm.id && selectedAlarm?.isCustom ? t('selected') : t('select')}
                     </button>
                     <button 
                       className="delete-button"
@@ -291,7 +305,7 @@ function AlarmManager({ isOpen, onClose, selectedAlarm, onAlarmChange }) {
               ))}
               {customAlarms.length === 0 && (
                 <div className="no-custom-alarms">
-                  Aucun son personnalisé. Ajoutez vos propres fichiers audio !
+                  {t('noCustomAlarms')}
                 </div>
               )}
             </div>
@@ -300,7 +314,7 @@ function AlarmManager({ isOpen, onClose, selectedAlarm, onAlarmChange }) {
 
         <div className="alarm-manager-footer">
           <button className="close-footer-button" onClick={onClose}>
-            Fermer
+            {t('close')}
           </button>
         </div>
       </div>

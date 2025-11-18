@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useLanguage } from '../contexts/LanguageContext';
 import './TempoAssistant.css';
 
 const SYSTEM_PROMPT = `Tu es "Tempo", l'assistant intelligent intégré dans une application de minuteur universel.
@@ -107,6 +108,7 @@ Si l'utilisateur donne une durée précise après avoir dit non :
 - Toujours demander confirmation avant de créer un minuteur.`;
 
 function TempoAssistant({ isOpen, onClose, onCreateTimer }) {
+  const { t } = useLanguage();
   const [messages, setMessages] = useState([]);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -125,15 +127,15 @@ function TempoAssistant({ isOpen, onClose, onCreateTimer }) {
 
   useEffect(() => {
     if (isOpen && messages.length === 0) {
-      // Message de bienvenue
+      // Message de bienvenue traduit
       setMessages([
         {
           role: 'assistant',
-          content: "Bonjour ! Je suis Tempo, ton assistant pour créer des minuteurs.\n\nDis-moi ce que tu veux faire et je vais t'aider à configurer le minuteur parfait !\n\nExemples :\n• \"Je veux méditer 15 minutes\"\n• \"Cuire un gâteau pendant 35 minutes\"\n• \"Pomodoro de 25 minutes\""
+          content: `${t('tempoWelcome')}\n\n${t('tempoExamples')}\n${t('tempoExample1')}\n${t('tempoExample2')}\n${t('tempoExample3')}`
         }
       ]);
     }
-  }, [isOpen, messages.length]);
+  }, [isOpen, messages.length, t]);
 
   useEffect(() => {
     // Scroll automatique vers le bas
@@ -265,8 +267,8 @@ function TempoAssistant({ isOpen, onClose, onCreateTimer }) {
         <div className="proposal-header">
           <div className="proposal-icon">{emoji}</div>
           <div className="proposal-title">
-            <h4>Proposition de minuteur</h4>
-            <p className="proposal-subtitle">Tu veux {activity}</p>
+            <h4>{t('tempoProposalTitle')}</h4>
+            <p className="proposal-subtitle">{t('tempoProposalSubtitle')} {activity}</p>
           </div>
         </div>
         
@@ -276,21 +278,21 @@ function TempoAssistant({ isOpen, onClose, onCreateTimer }) {
               <>
                 <div className="timer-unit">
                   <span className="timer-number">{String(hours).padStart(2, '0')}</span>
-                  <span className="timer-label">heures</span>
+                  <span className="timer-label">{t('tempoHours')}</span>
                 </div>
                 <span className="timer-separator">:</span>
               </>
             )}
             <div className="timer-unit">
               <span className="timer-number">{String(minutes).padStart(2, '0')}</span>
-              <span className="timer-label">minutes</span>
+              <span className="timer-label">{t('tempoMinutes')}</span>
             </div>
             {seconds > 0 && (
               <>
                 <span className="timer-separator">:</span>
                 <div className="timer-unit">
                   <span className="timer-number">{String(seconds).padStart(2, '0')}</span>
-                  <span className="timer-label">secondes</span>
+                  <span className="timer-label">{t('tempoSeconds')}</span>
                 </div>
               </>
             )}
@@ -306,13 +308,13 @@ function TempoAssistant({ isOpen, onClose, onCreateTimer }) {
             className="proposal-btn proposal-btn-cancel"
             onClick={() => handleQuickAction('non')}
           >
-            <span>✕ Modifier</span>
+            <span>{t('tempoModify')}</span>
           </button>
           <button 
             className="proposal-btn proposal-btn-confirm"
             onClick={() => handleQuickAction('oui')}
           >
-            <span>✓ Créer le minuteur</span>
+            <span>{t('tempoConfirm')}</span>
           </button>
         </div>
       </div>
@@ -326,7 +328,7 @@ function TempoAssistant({ isOpen, onClose, onCreateTimer }) {
       <div className="success-message">
         <div className="success-icon">✅</div>
         <div className="success-text">
-          Parfait ! Je crée ton minuteur de {hours}h {minutes}min {seconds}s
+          {t('tempoSuccess')} {hours}h {minutes}min {seconds}s
         </div>
       </div>
     );
@@ -358,127 +360,85 @@ function TempoAssistant({ isOpen, onClose, onCreateTimer }) {
 
   const handleDemoMode = (userMessage) => {
     const lower = userMessage.toLowerCase();
-    
     // Normaliser le texte pour gérer les accents (é → e, etc.)
     const normalized = lower.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-    
+
+    // Cas spécial oeuf sur plat
+    if (normalized.includes('oeuf sur plat')) {
+      return JSON.stringify({
+        type: 'proposal',
+        activity: 'cuire un œuf sur plat',
+        hours: 0,
+        minutes: 3,
+        seconds: 0,
+        reason: 'Temps idéal pour un œuf sur plat',
+        emoji: '🍳'
+      });
+    }
+
+    // Cas spécial oeuf dur
+    if (normalized.includes('oeuf dur')) {
+      return JSON.stringify({
+        type: 'proposal',
+        activity: 'cuire un œuf dur',
+        hours: 0,
+        minutes: 10,
+        seconds: 0,
+        reason: 'Temps idéal pour un œuf dur',
+        emoji: '🥚'
+      });
+    }
+
+    // Détection marathon avec allure
+    const marathonRegex = /(marathon).*?(allure|vitesse|pace|\bkm\/h\b|\bkmh\b)[^\d]*(\d+(?:[\.,]\d+)?)/i;
+    if (marathonRegex.test(normalized)) {
+      // Distance marathon officielle
+      const MARATHON_KM = 42.195;
+      const match = normalized.match(marathonRegex);
+      let speed = parseFloat(match[3].replace(',', '.'));
+      if (speed > 0) {
+        // Calcul durée
+        const totalHours = MARATHON_KM / speed;
+        const hours = Math.floor(totalHours);
+        const minutes = Math.floor((totalHours - hours) * 60);
+        const seconds = Math.round((((totalHours - hours) * 60) - minutes) * 60);
+        return JSON.stringify({
+          type: 'proposal',
+          activity: `marathon à ${speed} km/h`,
+          hours,
+          minutes,
+          seconds,
+          reason: `Durée calculée pour parcourir 42,195 km à ${speed} km/h`,
+          emoji: '🏃'
+        });
+      }
+    }
+
     // Détection de confirmation
     if (lower.includes('oui') || lower.includes('ok') || lower.includes('d\'accord') || lower.includes('lance') || lower.includes('go')) {
-      // Extraire la durée du dernier message de l'assistant
+      // Cherche la dernière proposition assistant
       const lastAssistant = [...messages].reverse().find(m => m.role === 'assistant');
       if (lastAssistant) {
-        // D'abord essayer de parser comme JSON (nouvelle proposition graphique)
         try {
           const proposalData = JSON.parse(lastAssistant.content);
           if (proposalData.type === 'proposal') {
-            console.log('✅ Confirmation de la proposition:', proposalData);
             return `CRÉER_MINUTEUR: ${proposalData.hours} heures ${proposalData.minutes} minutes ${proposalData.seconds} secondes`;
           }
         } catch (e) {
-          // Pas du JSON, essayer le regex (ancien format texte)
-          const match = lastAssistant.content.match(/(\d+)\s*(h|heure|min|minute|sec|seconde)/gi);
-          if (match) {
-            let hours = 0, minutes = 0, seconds = 0;
-            
-            match.forEach(m => {
-              const num = parseInt(m);
-              if (m.includes('h')) hours = num;
-              else if (m.includes('min')) minutes = num;
-              else if (m.includes('sec')) seconds = num;
-            });
-            
-            return `CRÉER_MINUTEUR: ${hours} heures ${minutes} minutes ${seconds} secondes`;
-          }
+          // Si pas JSON, ignore
         }
       }
+      return null;
     }
-    
+
     // Détection de refus ou ajustement
     if (lower.includes('non') || lower.includes('trop court') || lower.includes('trop long')) {
-      const lastAssistant = [...messages].reverse().find(m => m.role === 'assistant');
-      if (lastAssistant) {
-        // Essayer de parser comme JSON d'abord
-        try {
-          const proposalData = JSON.parse(lastAssistant.content);
-          if (proposalData.type === 'proposal') {
-            let newMinutes = proposalData.minutes;
-            
-            if (lower.includes('trop court') || lower.includes('plus long')) {
-              newMinutes += 10;
-            } else if (lower.includes('trop long') || lower.includes('plus court')) {
-              newMinutes = Math.max(5, proposalData.minutes - 10);
-            }
-            
-            return JSON.stringify({
-              type: 'proposal',
-              activity: 'ajuster la durée',
-              hours: proposalData.hours,
-              minutes: newMinutes,
-              seconds: proposalData.seconds,
-              reason: 'Ajustement selon ta préférence',
-              emoji: '⚙️'
-            });
-          }
-        } catch (e) {
-          // Ancien format texte
-          const match = lastAssistant.content.match(/(\d+)\s*min/i);
-          if (match) {
-            let currentMinutes = parseInt(match[1]);
-            let newMinutes = currentMinutes;
-            
-            if (lower.includes('trop court') || lower.includes('plus long')) {
-              newMinutes += 10;
-            } else if (lower.includes('trop long') || lower.includes('plus court')) {
-              newMinutes = Math.max(5, currentMinutes - 10);
-            }
-            
-            return JSON.stringify({
-              type: 'proposal',
-              activity: 'ajuster la durée',
-              hours: 0,
-              minutes: newMinutes,
-              seconds: 0,
-              reason: 'Ajustement selon ta préférence',
-              emoji: '⚙️'
-            });
-          }
-        }
-      }
+      // ...existing code...
     }
-    
+
     // Patterns de durée explicite
-    const patterns = [
-      { regex: /(\d+)\s*(h|heure)/i, type: 'hours' },
-      { regex: /(\d+)\s*(min|minute)/i, type: 'minutes' },
-      { regex: /(\d+)\s*(sec|seconde)/i, type: 'seconds' }
-    ];
-    
-    let hours = 0, minutes = 0, seconds = 0;
-    let hasExplicitDuration = false;
-    
-    patterns.forEach(({ regex, type }) => {
-      const match = userMessage.match(regex);
-      if (match) {
-        hasExplicitDuration = true;
-        const value = parseInt(match[1]);
-        if (type === 'hours') hours = value;
-        else if (type === 'minutes') minutes = value;
-        else if (type === 'seconds') seconds = value;
-      }
-    });
-    
-    if (hasExplicitDuration) {
-      return JSON.stringify({
-        type: 'proposal',
-        activity: 'minuteur personnalisé',
-        hours,
-        minutes,
-        seconds,
-        reason: 'Durée que tu as spécifiée',
-        emoji: '⏱️'
-      });
-    }
-    
+    // ...existing code...
+
     // Mapping des activités avec emojis
     const activityEmojis = {
       'meditation': '🧘',
@@ -682,8 +642,8 @@ function TempoAssistant({ isOpen, onClose, onCreateTimer }) {
           <div className="tempo-title">
             <div className="tempo-icon">🤖</div>
             <div>
-              <h3>Tempo Assistant</h3>
-              <p className="tempo-subtitle">Ton assistant intelligent pour créer des minuteurs</p>
+              <h3>{t('tempoTitle')}</h3>
+              <p className="tempo-subtitle">{t('tempoSubtitle')}</p>
             </div>
           </div>
           <button className="tempo-close-btn" onClick={onClose}>×</button>
@@ -716,28 +676,28 @@ function TempoAssistant({ isOpen, onClose, onCreateTimer }) {
         <div className="tempo-input-container">
           {/* Actions rapides */}
           <div className="tempo-quick-actions">
-            <button className="quick-action-btn" onClick={() => handleQuickAction('Pomodoro 25 minutes')}>
-              Pomodoro
+            <button className="quick-action-btn" onClick={() => handleQuickAction(t('tempoPomodoro') + ' 25 minutes')}>
+              {t('tempoPomodoro')}
             </button>
-            <button className="quick-action-btn" onClick={() => handleQuickAction('Méditation 10 minutes')}>
-              Méditation
+            <button className="quick-action-btn" onClick={() => handleQuickAction(t('tempoMeditation') + ' 10 minutes')}>
+              {t('tempoMeditation')}
             </button>
-            <button className="quick-action-btn" onClick={() => handleQuickAction('Sieste 20 minutes')}>
-              Sieste
+            <button className="quick-action-btn" onClick={() => handleQuickAction(t('tempoNap') + ' 20 minutes')}>
+              {t('tempoNap')}
             </button>
-            <button className="quick-action-btn" onClick={() => handleQuickAction('Exercice 30 minutes')}>
-              Sport
+            <button className="quick-action-btn" onClick={() => handleQuickAction(t('tempoSport') + ' 30 minutes')}>
+              {t('tempoSport')}
             </button>
           </div>
 
-          {error && <div className="tempo-error">Erreur : {error}</div>}
+          {error && <div className="tempo-error">{t('tempoError')} {error}</div>}
 
           <div className="tempo-input-wrapper">
             <input
               ref={inputRef}
               type="text"
               className="tempo-input"
-              placeholder="Que veux-tu faire ?"
+              placeholder={t('tempoInputPlaceholder')}
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
               onKeyPress={handleKeyPress}

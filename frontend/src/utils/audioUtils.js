@@ -192,17 +192,17 @@ class AudioUtilsClass {
           case 'classic':
             this.playClassicAlarm();
             break;
-          case 'gentle':
-            this.playGentleAlarm();
+          case 'beep':
+            this.playBeepAlarm();
             break;
-          case 'urgent':
-            this.playUrgentAlarm();
+          case 'chime':
+            this.playChimeAlarm();
             break;
-          case 'digital':
-            this.playDigitalAlarm();
+          case 'bell':
+            this.playBellAlarm();
             break;
-          case 'nature':
-            this.playNatureAlarm();
+          case 'siren':
+            this.playSirenAlarm();
             break;
           default:
             this.playClassicAlarm();
@@ -241,70 +241,88 @@ class AudioUtilsClass {
     });
   }
 
-  playGentleAlarm() {
+  playBeepAlarm() {
     if (!this.audioContext) return;
     
-    console.log('🌸 Alarme douce');
+    console.log('🔊 Alarme Bip');
     
-    // Montée progressive douce
-    const frequencies = [400, 450, 500, 550, 600];
+    // Bips rapides et répétitifs
+    for (let i = 0; i < 5; i++) {
+      setTimeout(() => {
+        if (this.isPlaying) {
+          this.createAlarmTone(1000, 0.5, 0.15);
+        }
+      }, i * 200);
+    }
+  }
+
+  playChimeAlarm() {
+    if (!this.audioContext) return;
+    
+    console.log('🎵 Alarme Carillon');
+    
+    // Carillon doux et mélodieux
+    const frequencies = [523, 659, 784, 1047]; // Do, Mi, Sol, Do
     
     frequencies.forEach((freq, index) => {
       setTimeout(() => {
         if (this.isPlaying) {
-          this.createAlarmTone(freq, 0.3, 0.2);
+          this.createAlarmTone(freq, 0.3, 0.4, 'sine');
         }
-      }, index * 200);
+      }, index * 300);
     });
   }
 
-  playUrgentAlarm() {
+  playBellAlarm() {
     if (!this.audioContext) return;
     
-    console.log('🚨 Alarme urgente');
+    console.log('🔔 Alarme Cloche');
     
-    // Sirène rapide
+    // Sonnerie de cloche traditionnelle
+    const pattern = [880, 880, 1100];
+    
+    pattern.forEach((freq, index) => {
+      setTimeout(() => {
+        if (this.isPlaying) {
+          this.createAlarmTone(freq, 0.5, 0.6);
+        }
+      }, index * 600);
+    });
+  }
+
+  playSirenAlarm() {
+    if (!this.audioContext) return;
+    
+    console.log('🚨 Alarme Sirène');
+    
+    // Sirène d'urgence puissante
     for (let i = 0; i < 6; i++) {
       setTimeout(() => {
         if (this.isPlaying) {
-          this.createAlarmTone(1200 - (i % 2) * 400, 0.6, 0.2);
+          this.createAlarmTone(1200 - (i % 2) * 400, 0.6, 0.25);
         }
       }, i * 250);
     }
   }
 
+  playGentleAlarm() {
+    // Kept for backward compatibility
+    this.playChimeAlarm();
+  }
+
+  playUrgentAlarm() {
+    // Kept for backward compatibility
+    this.playSirenAlarm();
+  }
+
   playDigitalAlarm() {
-    if (!this.audioContext) return;
-    
-    console.log('💻 Alarme digitale');
-    
-    // Séquence digitale
-    const pattern = [880, 1760, 880, 1760, 1320];
-    
-    pattern.forEach((freq, index) => {
-      setTimeout(() => {
-        if (this.isPlaying) {
-          this.createAlarmTone(freq, 0.4, 0.15);
-        }
-      }, index * 150);
-    });
+    // Kept for backward compatibility
+    this.playBeepAlarm();
   }
 
   playNatureAlarm() {
-    if (!this.audioContext) return;
-    
-    console.log('🌿 Alarme nature');
-    
-    // Simulation d'oiseaux
-    const frequencies = [1500, 1800, 1200, 1600, 1400];
-    
-    frequencies.forEach((freq, index) => {
-      setTimeout(() => {
-        if (this.isPlaying) {
-          this.createAlarmTone(freq, 0.3, 0.3, 'sine');
-        }
-      }, index * 300);
-    });
+    // Kept for backward compatibility
+    this.playChimeAlarm();
   }
 
   createAlarmTone(frequency, volume, duration, waveType = 'square') {
@@ -527,39 +545,14 @@ class AudioUtilsClass {
     });
   }
 
-  // Get default alarm configurations
+  // Get default alarm configurations (returns only IDs, translation done in components)
   getDefaultAlarms() {
     return [
-      {
-        id: 'classic',
-        name: 'Classique',
-        description: 'Son d\'alarme traditionnel',
-        isCustom: false
-      },
-      {
-        id: 'gentle',
-        name: 'Douce',
-        description: 'Alarme progressive et douce',
-        isCustom: false
-      },
-      {
-        id: 'urgent',
-        name: 'Urgente',
-        description: 'Alarme forte et insistante',
-        isCustom: false
-      },
-      {
-        id: 'digital',
-        name: 'Digitale',
-        description: 'Son électronique moderne',
-        isCustom: false
-      },
-      {
-        id: 'nature',
-        name: 'Nature',
-        description: 'Sons naturels apaisants',
-        isCustom: false
-      }
+      { id: 'classic', isCustom: false },
+      { id: 'beep', isCustom: false },
+      { id: 'chime', isCustom: false },
+      { id: 'bell', isCustom: false },
+      { id: 'siren', isCustom: false }
     ];
   }
 }

@@ -1,14 +1,30 @@
+
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import axios from 'axios';
 import AlarmManager from './AlarmManager';
 import TempoAssistant from './TempoAssistant';
+import LanguageSelector from './LanguageSelector';
 import { AudioUtils } from '../utils/audioUtils';
 import { TIMER_API_URL, PRESETS_API_URL } from '../config';
+import { useLanguage } from '../contexts/LanguageContext';
 import './Stopwatch.css';
 // Importer le gestionnaire de détection de gestes
 import '../utils/gestureDetection';
 
-function Stopwatch({ onModeChange }) {
+export default function Stopwatch({ onModeChange }) {
+  const { t } = useLanguage();
+  const [focusStartCount, setFocusStartCount] = useState(0);
+  const [focusMode, setFocusMode] = useState(false);
+  // ...existing code...
+
+  // Désactive le mode focus dès que le compteur atteint 3
+  useEffect(() => {
+    if (focusMode && focusStartCount >= 3) {
+      setFocusMode(false);
+      setFocusStartCount(0);
+    }
+  }, [focusMode, focusStartCount]);
+  
   const [mode, setMode] = useState('stopwatch'); // 'stopwatch' or 'countdown'
   const [status, setStatus] = useState('stopped'); // 'stopped', 'running', 'paused'
   const [currentTime, setCurrentTime] = useState(0);
@@ -37,9 +53,9 @@ function Stopwatch({ onModeChange }) {
     return saved ? JSON.parse(saved) : { id: 'classic', isCustom: false };
   });
   const [customAlarms, setCustomAlarms] = useState([]);
-  const [focusMode, setFocusMode] = useState(false);
   const [isAlarmPlaying, setIsAlarmPlaying] = useState(false);
   const [showTempoAssistant, setShowTempoAssistant] = useState(false);
+  const [showColorPanel, setShowColorPanel] = useState(false);
   
   // Détection du double-clic/double-tap sur l'affichage du temps
   const [lastTap, setLastTap] = useState(0);
@@ -61,24 +77,26 @@ function Stopwatch({ onModeChange }) {
   const [initialCountdownTime, setInitialCountdownTime] = useState(0);
   const [showAlarmPanel, setShowAlarmPanel] = useState(false);
 
-  // Fonction pour basculer le mode Focus avec feedback
+  // Gestion du mode Focus : plein écran, fond gris, désactivation des boutons sauf Start 3 fois
   const toggleFocusMode = useCallback(() => {
     const newFocusMode = !focusMode;
     setFocusMode(newFocusMode);
-    
-    // Feedback audio
+    setFocusStartCount(0);
     playClickSound();
-    
-    // Log pour debug
-    console.log(`Mode Focus ${newFocusMode ? 'activé' : 'désactivé'}`);
-    
-    // Optionnel: afficher une notification temporaire
     if (newFocusMode) {
-      console.log('Mode Focus actif - Contrôles limités pendant le minuteur');
+      // Activer le plein écran
+      if (document.documentElement.requestFullscreen) {
+        document.documentElement.requestFullscreen();
+      }
     } else {
-      console.log('Mode Focus désactivé - Tous les contrôles disponibles');
+      // Quitter le plein écran seulement si actif
+      if (document.exitFullscreen && document.fullscreenElement) {
+        document.exitFullscreen();
+      }
     }
   }, [focusMode]);
+  // Désactivation des boutons en mode focus sauf Start 3 fois
+  const isFocusLocked = focusMode && focusStartCount < 3;
 
   // Fonction universelle pour activer l'audio sur CHAQUE interaction - DÉPLACÉE AVANT utilisation
   const forceAudioActivation = useCallback(async () => {
@@ -462,14 +480,81 @@ function Stopwatch({ onModeChange }) {
 
   // Hook pour initialiser l'interface de gestes après le rendu
   useEffect(() => {
+    // Rendre les traductions accessibles globalement pour les fonctions de gestes
+    window.gestureTranslations = {
+      detection: t('detection'),
+      learning: t('learning'),
+      calibrate: t('calibrate'),
+      clearSequence: t('clearSequence'),
+      fingers: t('fingers'),
+      confidence: t('confidence'),
+      sequence: t('sequence'),
+      gestureGuide: t('gestureGuide'),
+      gestureFist: t('gestureFist'),
+      gestureIndex: t('gestureIndex'),
+      gestureVictory: t('gestureVictory'),
+      gestureThree: t('gestureThree'),
+      gestureFour: t('gestureFour'),
+      gestureOpen: t('gestureOpen'),
+      gestureTipsTitle: t('gestureTipsTitle'),
+      gestureTip1: t('gestureTip1'),
+      gestureTip2: t('gestureTip2'),
+      gestureTip3: t('gestureTip3'),
+      gestureTip4: t('gestureTip4'),
+      calibrationTitle: t('calibrationTitle'),
+      calibrationDesc: t('calibrationDesc'),
+      calibrationStart: t('calibrationStart'),
+      calibrationCancel: t('calibrationCancel'),
+      calibrationStop: t('calibrationStop'),
+      calibrationShow: t('calibrationShow'),
+      calibrationPreparation: t('calibrationPreparation'),
+      calibrationComplete: t('calibrationComplete'),
+      calibrationUnderstood: t('calibrationUnderstood'),
+      calibrationMaintain: t('calibrationMaintain'),
+      gestureShowFist: t('gestureShowFist'),
+      gestureShowIndex: t('gestureShowIndex'),
+      gestureShowVictory: t('gestureShowVictory'),
+      gestureShowThree: t('gestureShowThree'),
+      gestureShowFour: t('gestureShowFour'),
+      gestureShowOpen: t('gestureShowOpen'),
+    };
+    
     // Initialiser les gestionnaires d'événements pour l'interface de gestes
     const initializeGestureEvents = () => {
       console.log('🎯 Initialisation des gestionnaires d\'événements de gestes...');
       
-      // Gestionnaire pour basculer entre les modes
+      // Mettre à jour les textes de l'interface avec les traductions
       const detectBtn = document.getElementById('mode-detect-btn');
       const learnBtn = document.getElementById('mode-learn-btn');
+      const calibrateBtn = document.getElementById('calibrate-btn');
+      const clearBtn = document.getElementById('clear-sequence-btn');
       
+      if (detectBtn) detectBtn.textContent = t('detection');
+      if (learnBtn) detectBtn.textContent = t('learning');
+      if (calibrateBtn) calibrateBtn.innerHTML = `📏 ${t('calibrate')}`;
+      if (clearBtn) clearBtn.innerHTML = `🗑️ ${t('clearSequence')}`;
+      
+      // Mettre à jour le titre du guide
+      const guideTitle = document.querySelector('#learning-mode > div:first-child');
+      if (guideTitle) guideTitle.textContent = `📚 ${t('gestureGuide')}`;
+      
+      // Mettre à jour les labels
+      const fingersLabel = document.querySelector('#gesture-status');
+      if (fingersLabel) {
+        const count = document.getElementById('gesture-count').textContent;
+        fingersLabel.innerHTML = `<span id="gesture-count" style="color: #4caf50; fontSize: 18px">${count}</span> ${t('fingers')}
+          <div id="confidence-display" style="fontSize: 10px; color: rgba(255,255,255,0.7)">
+            ${t('confidence')}: <span id="confidence-value">0%</span>
+          </div>`;
+      }
+      
+      const sequenceLabel = document.querySelector('#gesture-sequence');
+      if (sequenceLabel) {
+        const display = document.getElementById('sequence-display').textContent;
+        sequenceLabel.innerHTML = `${t('sequence')}: <span id="sequence-display" style="fontWeight: bold">${display}</span>`;
+      }
+      
+      // Gestionnaire pour basculer entre les modes
       if (detectBtn && learnBtn) {
         detectBtn.onclick = () => switchToDetectionMode();
         learnBtn.onclick = () => switchToLearningMode();
@@ -477,14 +562,12 @@ function Stopwatch({ onModeChange }) {
       }
       
       // Gestionnaire pour la calibration
-      const calibrateBtn = document.getElementById('calibrate-btn');
       if (calibrateBtn) {
         calibrateBtn.onclick = () => startCalibration();
         console.log('✅ Gestionnaire de calibration attaché');
       }
       
       // Gestionnaire pour effacer la séquence
-      const clearBtn = document.getElementById('clear-sequence-btn');
       if (clearBtn) {
         clearBtn.onclick = () => clearGestureSequence();
         console.log('✅ Gestionnaire d\'effacement attaché');
@@ -508,43 +591,42 @@ function Stopwatch({ onModeChange }) {
     return () => {
       console.log('🧹 Nettoyage des gestionnaires de gestes');
     };
-  }, []); // Exécuter une seule fois après le montage
+  }, [t]); // Ajouter t comme dépendance pour mettre à jour quand la langue change
 
   // Fonction pour démarrer/arrêter le timer
   const handleStartStop = useCallback(async () => {
     console.log('🔘 handleStartStop appelé, status actuel:', status);
-    
+    // En mode focus, compter les appuis sur Start
+    if (focusMode) {
+      setFocusStartCount(prev => {
+        if (prev + 1 >= 3) {
+          // Unlock buttons and exit Focus mode after 3 presses
+          setFocusMode(false);
+          return 0;
+        }
+        return prev + 1;
+      });
+    }
     await handleInteractionWithAudio(async () => {
       try {
         let action;
         if (status === 'stopped') {
           action = 'start';
         } else if (status === 'running') {
-          action = 'stop';  // Changé de 'pause' à 'stop'
+          action = 'stop';
         } else if (status === 'paused') {
-          action = 'start';  // Changé de 'resume' à 'start'
+          action = 'start';
         }
-
-        console.log('📤 Action envoyée au serveur:', action);
-        
         const response = await axios.post(`${TIMER_API_URL}/action/`, { action });
         const data = response.data;
-        
-        console.log('📥 Réponse du serveur:', data);
-        console.log('📊 Nouveau status:', data.status);
-        
         setStatus(data.status);
         setCurrentTime(data.calculated_time || data.current_time);
         setInitialTime(data.initial_time);
         setMode(data.mode);
-        
-        // Si c'est un démarrage, démarrer le timer local
         if (data.status === 'running') {
-          console.log('▶️ Démarrage du timer local');
           lastUpdateRef.current = Date.now();
           startLocalTimer();
         } else {
-          console.log('⏸️ Arrêt du timer local');
           stopLocalTimer();
         }
       } catch (error) {
@@ -1360,14 +1442,14 @@ function Stopwatch({ onModeChange }) {
 
   const getMainControlText = () => {
     if (status === 'running') {
-      return 'Pause';
+      return t('pause');
     } else {
-      return 'Start';
+      return t('start');
     }
   };
 
   const getModeLabel = () => {
-    return mode === 'stopwatch' ? 'Chronomètre' : 'Minuteur';
+    return mode === 'stopwatch' ? t('stopwatch') : t('countdown');
   };
 
   // Gestionnaire d'overlay amélioré pour mobile
@@ -1385,7 +1467,19 @@ function Stopwatch({ onModeChange }) {
   }, [forceAudioActivation]);
 
   return (
-    <div className={`stopwatch-container ${isAlarmPlaying ? 'alarm-active' : ''}`}>
+    <div className={`stopwatch-container ${isAlarmPlaying ? 'alarm-active' : ''} ${focusMode ? 'focus-active' : ''}`}>
+      {focusMode && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          width: '100vw',
+          height: '100vh',
+          background: 'rgba(60,60,60,0.55)',
+          zIndex: 999,
+          pointerEvents: 'none',
+        }} />
+      )}
       {/* Overlay gris transparent quand l'alarme sonne */}
       {isAlarmPlaying && (
         <div 
@@ -1670,94 +1764,112 @@ function Stopwatch({ onModeChange }) {
         <div className="header-left-buttons">
           <div className="mode-toggle-container">
             <button 
-              className={`mode-toggle-btn ${mode === 'stopwatch' ? 'active' : ''} ${focusMode ? 'disabled' : ''}`}
+              className={`mode-toggle-btn ${mode === 'stopwatch' ? 'active' : ''} ${isFocusLocked ? 'disabled' : ''}`}
               onClick={() => handleInteractionWithAudio(async () => {
-                if (!focusMode && mode !== 'stopwatch') {
+                if (!isFocusLocked && mode !== 'stopwatch') {
                   try {
-                    // Utiliser l'API pour changer le mode
                     await handleAction('toggle_mode');
                   } catch (error) {
                     console.error('Error switching to stopwatch:', error);
                   }
                 }
               })}
-              disabled={focusMode}
+              disabled={isFocusLocked}
             >
-              Chrono
+              {t('stopwatch')}
             </button>
             <button 
-              className={`mode-toggle-btn ${mode === 'countdown' ? 'active' : ''} ${focusMode ? 'disabled' : ''}`}
+              className={`mode-toggle-btn ${mode === 'countdown' ? 'active' : ''} ${isFocusLocked ? 'disabled' : ''}`}
               onClick={() => handleInteractionWithAudio(async () => {
-                if (!focusMode && mode !== 'countdown') {
+                if (!isFocusLocked && mode !== 'countdown') {
                   try {
-                    // Utiliser l'API pour changer le mode
                     await handleAction('toggle_mode');
                   } catch (error) {
                     console.error('Error switching to countdown:', error);
                   }
                 }
               })}
-              disabled={focusMode}
+              disabled={isFocusLocked}
             >
-              Minuteur
+              {t('countdown')}
             </button>
           </div>
-          <button 
-            className="presets-button"
-            onClick={() => handleInteractionWithAudio(() => setShowPresets(true))}
-          >
-            Presets
-          </button>
           
-          {/* Bouton pour activer/désactiver la détection de gestes */}
-          <button 
-            className="presets-button"
-            id="gesture-toggle-btn"
-            onClick={() => handleInteractionWithAudio(() => {
-              const gestureInterface = document.getElementById('gesture-interface');
-              if (gestureInterface.style.display === 'none' || !gestureInterface.style.display) {
-                gestureInterface.style.display = 'block';
-                window.startGestureDetection && window.startGestureDetection();
-              } else {
-                gestureInterface.style.display = 'none';
-                window.stopGestureDetection && window.stopGestureDetection();
-              }
-            })}
-            style={{ background: 'rgba(76, 175, 80, 0.3)' }}
-          >
-            👋 Gestes
-          </button>
+          {/* Afficher Presets seulement en mode countdown */}
+          {mode === 'countdown' && (
+            <button 
+              className={`presets-button${isFocusLocked ? ' disabled' : ''}`}
+              onClick={() => !isFocusLocked && handleInteractionWithAudio(() => setShowPresets(true))}
+              disabled={isFocusLocked}
+            >
+              {t('presets')}
+            </button>
+          )}
           
-          {/* Bouton pour ouvrir l'Assistant IA */}
-          <button 
-            className="presets-button"
-            onClick={() => handleInteractionWithAudio(() => setShowTempoAssistant(true))}
-            style={{ background: 'rgba(33, 150, 243, 0.3)' }}
-          >
-            🤖 IA
-          </button>
+          {/* Afficher Gestes seulement en mode countdown */}
+          {mode === 'countdown' && (
+            <button 
+              className={`presets-button${isFocusLocked ? ' disabled' : ''}`}
+              id="gesture-toggle-btn"
+              onClick={() => !isFocusLocked && handleInteractionWithAudio(() => {
+                const gestureInterface = document.getElementById('gesture-interface');
+                if (gestureInterface.style.display === 'none' || !gestureInterface.style.display) {
+                  gestureInterface.style.display = 'block';
+                  window.startGestureDetection && window.startGestureDetection();
+                } else {
+                  gestureInterface.style.display = 'none';
+                  window.stopGestureDetection && window.stopGestureDetection();
+                }
+              })}
+              style={{ background: 'rgba(76, 175, 80, 0.3)' }}
+              disabled={isFocusLocked}
+            >
+              {t('gestures')}
+            </button>
+          )}
+          
+          {/* Afficher Tempo seulement en mode countdown */}
+          {mode === 'countdown' && (
+            <button 
+              className={`presets-button${isFocusLocked ? ' disabled' : ''}`}
+              onClick={() => !isFocusLocked && handleInteractionWithAudio(() => setShowTempoAssistant(true))}
+              style={{ background: 'rgba(33, 150, 243, 0.3)' }}
+              disabled={isFocusLocked}
+            >
+              {t('tempo')}
+            </button>
+          )}
         </div>
         
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <button 
-            className="alarm-button"
-            onClick={() => handleInteractionWithAudio(() => setShowAlarmManager(true))}
-          >
-            Sons
-          </button>
+          <LanguageSelector />
           
-          <div className="focus-mode-toggle">
-            <label className="focus-toggle-label">
-              <span className="focus-label-text">Focus</span>
-              <input
-                type="checkbox"
-                className="focus-toggle-checkbox"
-                checked={focusMode}
-                onChange={toggleFocusMode}
-              />
-              <span className="focus-toggle-slider"></span>
-            </label>
-          </div>
+          {/* Afficher Sons seulement en mode countdown */}
+          {mode === 'countdown' && (
+            <button 
+              className={`alarm-button${isFocusLocked ? ' disabled' : ''}`}
+              onClick={() => !isFocusLocked && handleInteractionWithAudio(() => setShowAlarmManager(true))}
+              disabled={isFocusLocked}
+            >
+              {t('sounds')}
+            </button>
+          )}
+          
+          {/* Afficher Focus seulement en mode countdown */}
+          {mode === 'countdown' && (
+            <div className="focus-mode-toggle">
+              <label className="focus-toggle-label">
+                <span className="focus-label-text">{t('focus')}</span>
+                <input
+                  type="checkbox"
+                  className="focus-toggle-checkbox"
+                  checked={focusMode}
+                  onChange={toggleFocusMode}
+                />
+                <span className="focus-toggle-slider"></span>
+              </label>
+            </div>
+          )}
         </div>
       </div>
 
@@ -1773,8 +1885,12 @@ function Stopwatch({ onModeChange }) {
       <TempoAssistant
         isOpen={showTempoAssistant}
         onClose={() => setShowTempoAssistant(false)}
-        onCreateTimer={(timerData) => {
-          handleInteractionWithAudio(async () => {
+        onCreateTimer={async (timerData) => {
+          await handleInteractionWithAudio(async () => {
+            // Si on n'est pas en mode countdown, basculer avant de créer le minuteur
+            if (mode !== 'countdown') {
+              await handleAction('toggle_mode');
+            }
             const { hours, minutes, seconds } = timerData;
             const response = await axios.post(`${TIMER_API_URL}/set_time/`, { hours, minutes, seconds });
             const data = response.data;
@@ -1794,14 +1910,14 @@ function Stopwatch({ onModeChange }) {
         }}>
           <div className="presets-panel-content">
             <div className="presets-header">
-              <h3>Minuteurs Prédéfinis</h3>
+              <h3>{t('predefinedTimers')}</h3>
               <button className="close-button" onClick={() => setShowPresets(false)}>×</button>
             </div>
             
             <div className="presets-list">
               {presets.length === 0 ? (
                 <div style={{ padding: '20px', textAlign: 'center', color: 'rgba(255,255,255,0.6)' }}>
-                  Aucun preset pour le moment
+                  {t('noPresets')}
                 </div>
               ) : (
                 presets.map(preset => (
@@ -1813,10 +1929,10 @@ function Stopwatch({ onModeChange }) {
                     </div>
                     <div className="preset-actions">
                       <button className="apply-button" onClick={() => handleApplyPreset(preset)}>
-                        Utiliser
+                        {t('use')}
                       </button>
                       <button className="delete-button" onClick={() => handleDeletePreset(preset.id)}>
-                        Supprimer
+                        {t('delete')}
                       </button>
                     </div>
                   </div>
@@ -1827,19 +1943,19 @@ function Stopwatch({ onModeChange }) {
             <div className="presets-footer">
               {!showCreatePreset ? (
                 <button className="create-preset-button" onClick={() => setShowCreatePreset(true)}>
-                  + Créer un preset
+                  + {t('createPreset')}
                 </button>
               ) : (
                 <div className="create-preset-form">
                   <input
                     type="text"
-                    placeholder="Nom du preset (ex: Sport 15min)"
+                    placeholder={t('presetName')}
                     value={newPresetName}
                     onChange={(e) => setNewPresetName(e.target.value)}
                     className="preset-name-input"
                   />
                   <textarea
-                    placeholder="Description (optionnel)"
+                    placeholder={t('presetDescription')}
                     value={newPresetDescription}
                     onChange={(e) => setNewPresetDescription(e.target.value)}
                     className="preset-description-input"
@@ -1848,7 +1964,7 @@ function Stopwatch({ onModeChange }) {
                   {presetSuccess && <div className="preset-success">{presetSuccess}</div>}
                   <div className="create-preset-buttons">
                     <button className="save-button" onClick={handleCreatePreset} disabled={isCreatingPreset}>
-                      {isCreatingPreset ? 'Création...' : 'Sauvegarder'}
+                      {isCreatingPreset ? t('creating') : t('save')}
                     </button>
                     <button className="cancel-button" onClick={() => {
                       setShowCreatePreset(false);
@@ -1856,7 +1972,7 @@ function Stopwatch({ onModeChange }) {
                       setNewPresetDescription('');
                       setPresetError('');
                     }}>
-                      Annuler
+                      {t('cancel')}
                     </button>
                   </div>
                 </div>
@@ -1875,13 +1991,13 @@ function Stopwatch({ onModeChange }) {
         }}>
           <div className="time-edit-panel-content">
             <div className="time-edit-header">
-              <h3>Régler le minuteur</h3>
+              <h3>{t('setTimer')}</h3>
               <button className="close-button" onClick={handleTimeEditCancel}>×</button>
             </div>
             
             <div className="time-edit-inputs">
               <div className="time-input-group">
-                <label>Heures</label>
+                <label>{t('hours')}</label>
                 <input
                   type="number"
                   min="0"
@@ -1900,7 +2016,7 @@ function Stopwatch({ onModeChange }) {
               <div className="time-separator">:</div>
               
               <div className="time-input-group">
-                <label>Minutes</label>
+                <label>{t('minutes')}</label>
                 <input
                   type="number"
                   min="0"
@@ -1919,7 +2035,7 @@ function Stopwatch({ onModeChange }) {
               <div className="time-separator">:</div>
               
               <div className="time-input-group">
-                <label>Secondes</label>
+                <label>{t('seconds')}</label>
                 <input
                   type="number"
                   min="0"
@@ -1938,10 +2054,10 @@ function Stopwatch({ onModeChange }) {
             
             <div className="time-edit-actions">
               <button className="cancel-button" onClick={handleTimeEditCancel}>
-                Annuler
+                {t('cancel')}
               </button>
               <button className="save-button" onClick={handleTimeEditConfirm}>
-                Valider
+                {t('validate')}
               </button>
             </div>
           </div>
@@ -2034,51 +2150,59 @@ function Stopwatch({ onModeChange }) {
               </div>
             </div>
 
-            <button className="main-control-button" onClick={handleStartStop}>
+            <button className="main-control-button" onClick={handleStartStop} disabled={isFocusLocked}>
               {getMainControlText()}
             </button>
 
             <div className="secondary-controls">
               <button 
-                className={`secondary-button ${focusMode && mode === 'countdown' && status === 'running' ? 'disabled' : ''}`} 
+                className={`secondary-button${isFocusLocked ? ' disabled' : ''}`} 
                 onClick={handleReset}
-                disabled={focusMode && mode === 'countdown' && status === 'running'}
+                disabled={isFocusLocked}
               >
-                Reset
+                {t('reset')}
               </button>
               {mode === 'countdown' && status === 'stopped' && (
-                <button className="secondary-button" onClick={handleEditTimeClick}>
-                  Régler
+                <button className={`secondary-button${isFocusLocked ? ' disabled' : ''}`} onClick={handleEditTimeClick} disabled={isFocusLocked}>
+                  {t('settings')}
                 </button>
               )}
-              <button className="secondary-button" onClick={handleDisplayModeToggle}>
-                Analog
+              <button className={`secondary-button${isFocusLocked ? ' disabled' : ''}`} onClick={handleDisplayModeToggle} disabled={isFocusLocked}>
+                {t('analog')}
               </button>
             </div>
           </>
         ) : (
           <div className="analog-mode">
             <AnalogClock time={currentTime} />
-            <button className="main-control-button" onClick={handleStartStop}>
+            <button className="main-control-button" onClick={handleStartStop} disabled={isFocusLocked}>
               {getMainControlText()}
             </button>
             <div className="secondary-controls">
               <button 
-                className={`secondary-button ${focusMode && mode === 'countdown' && status === 'running' ? 'disabled' : ''}`} 
+                className={`secondary-button${isFocusLocked ? ' disabled' : ''}`} 
                 onClick={handleReset}
-                disabled={focusMode && mode === 'countdown' && status === 'running'}
+                disabled={isFocusLocked}
               >
-                Reset
+                {t('reset')}
               </button>
               {mode === 'countdown' && status === 'stopped' && (
-                <button className="secondary-button" onClick={handleEditTimeClick}>
-                  Régler
+                <button className={`secondary-button${isFocusLocked ? ' disabled' : ''}`} onClick={handleEditTimeClick} disabled={isFocusLocked}>
+                  {t('settings')}
                 </button>
               )}
-              <button className="secondary-button" onClick={handleDisplayModeToggle}>
-                Digital
+              <button className={`secondary-button${isFocusLocked ? ' disabled' : ''}`} onClick={handleDisplayModeToggle} disabled={isFocusLocked}>
+                {t('digital')}
               </button>
             </div>
+            <button 
+              id="color-toggle-btn"
+              className={`color-toggle-btn${isFocusLocked ? ' disabled' : ''}`}
+              onClick={() => !isFocusLocked && setShowColorPanel(true)}
+              disabled={isFocusLocked}
+            >
+              <span role="img" aria-label="palette">🎨</span>
+            </button>
           </div>
         )}
       </div>
@@ -2438,7 +2562,9 @@ if (typeof window !== 'undefined') {
   window.showGestureExample = showGestureExample;
 }
 
+
+
+
 console.log('🎯 Fonctions de gestes initialisées');
 
-export default Stopwatch;
 
